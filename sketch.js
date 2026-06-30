@@ -33,4 +33,6 @@ function draw() {
             }
         }
     }
+
+    world.draw();
 }

@@ -15,6 +15,13 @@ class WorldGenerator {
         }
 
         this.noiseGen = new NoiseGenerator(10, 2, 1.5);
+
+        this.vis = createGraphics(this.cols, this.rows);
+        this.vis.background(0);
+    }
+
+    draw() {
+        image(this.vis, 0, 0);
     }
 
     getCell(x, y) {
@@ -58,14 +65,14 @@ class WorldGenerator {
     testDrawCell(world, cell) {
         if(!cell.noise) return;
 
-        noFill();
+        world.vis.noFill();
         if(cell.noise > 0.5) {
-            stroke(0, 180, 0);
+            world.vis.stroke(0, 180, 0);
         } else {
-            stroke(0, 0, 180);
+            world.vis.stroke(0, 0, 180);
         }
 
-        point(
+        world.vis.point(
             map(cell.x, 0, world.cols, 0, width),
             map(cell.y, 0, world.rows, 0, height),
         )
