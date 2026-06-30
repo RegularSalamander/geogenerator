@@ -1,3 +1,5 @@
+p5.disableFriendlyErrors = true;
+
 let cnv;
 
 const maxFrame = 1/60*1000;
@@ -18,25 +20,27 @@ function setup() {
     
     background(0);
 
-    world = new WorldGenerator(1024)
+    world = new WorldGenerator(256);
     funcList = [world.sphereNoise];
     worldIter = world.actOnCell(funcList[currentFunc], world.testDrawCell);
+
+    console.log(`Started ${funcList[currentFunc].name} at ${millis()} ms.`);
 }
 
 function draw() {
-    if(processing) {
-        let startTime = millis();
-        while(millis() - startTime < maxFrame) {
-            if(worldIter.next().done) {
-                currentFunc++;
-                if(currentFunc < funcList.length) {
-                    worldIter = world.actOnCell(funcList[currentFunc], world.testDrawCell);
-                } else {
-                    processing = false;
-                }
+    let startTime = millis();
+    while(processing && millis() - startTime < maxFrame) {
+        if(worldIter.next().done) {
+            console.log(`Stopped ${funcList[currentFunc].name} at ${millis()} ms.`);
+            currentFunc++;
+            if(currentFunc < funcList.length) {
+                worldIter = world.actOnCell(funcList[currentFunc], world.testDrawCell);
+                console.log(`Started ${funcList[currentFunc].name} at ${millis()} ms.`);
+            } else {
+                processing = false;
             }
         }
-    }
+    }   
 
     if(sphereMode) {
         background(10);
@@ -49,8 +53,8 @@ function draw() {
     } else {
         background(0);
         push();
-        translate(-world.cols/2, -world.rows/2);
-        world.draw();
+        translate(-width/2, -height/2);
+        image(world.vis, 0, 0, width, height);
         pop();
     }
 }

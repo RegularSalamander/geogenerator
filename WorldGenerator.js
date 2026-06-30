@@ -20,10 +20,6 @@ class WorldGenerator {
         this.vis.background(0);
     }
 
-    draw() {
-        image(this.vis, 0, 0);
-    }
-
     getCell(x, y) {
         //handle spherical shaped world
         while(x < 0) x += this.cols;
@@ -90,9 +86,6 @@ class WorldGenerator {
             world.vis.stroke(0, 0, 180);
         }
 
-        world.vis.point(
-            map(cell.x, 0, world.cols, 0, width),
-            map(cell.y, 0, world.rows, 0, height),
-        )
+        world.vis.point(cell.x, cell.y);
     }
 }
