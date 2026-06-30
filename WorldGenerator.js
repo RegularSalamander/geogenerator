@@ -65,9 +65,27 @@ class WorldGenerator {
     testDrawCell(world, cell) {
         if(!cell.noise) return;
 
+        const waterLine = 0.5;
+
         world.vis.noFill();
-        if(cell.noise > 0.5) {
-            world.vis.stroke(0, 180, 0);
+        if(cell.noise > waterLine) {
+            const col1 = [50, 200, 50];
+            const col2 = [128, 128, 128];
+            const col3 = [255, 255, 255];
+            const divider = 0.6;
+            if(cell.noise < divider) {
+                world.vis.stroke(
+                    map(cell.noise, waterLine, divider, col1[0], col2[0]),
+                    map(cell.noise, waterLine, divider, col1[1], col2[1]),
+                    map(cell.noise, waterLine, divider, col1[2], col2[2])
+                );
+            } else {
+                world.vis.stroke(
+                    map(cell.noise, divider, 1, col2[0], col3[0]),
+                    map(cell.noise, divider, 1, col2[1], col3[1]),
+                    map(cell.noise, divider, 1, col2[2], col3[2])
+                );
+            }
         } else {
             world.vis.stroke(0, 0, 180);
         }

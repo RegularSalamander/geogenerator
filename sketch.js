@@ -9,9 +9,11 @@ let currentFunc = 0;
 let funcList;
 let worldIter;
 
-let sphereMode = true;
+let sphereMode = false;
 
 function setup() {
+    frameRate(60);
+
     if(sphereMode) cnv = createCanvas(1024, 512, WEBGL);
     else cnv = createCanvas(1024, 512);
     
