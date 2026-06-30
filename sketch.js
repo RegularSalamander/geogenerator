@@ -20,8 +20,8 @@ function setup() {
     
     background(0);
 
-    world = new WorldGenerator(256);
-    funcList = [world.sphereNoise];
+    world = new WorldGenerator(512);
+    funcList = [world.sphereNoise, world.elevationWater];
     worldIter = world.actOnCell(funcList[currentFunc], world.testDrawCell);
 
     console.log(`Started ${funcList[currentFunc].name} at ${millis()} ms.`);
@@ -38,6 +38,7 @@ function draw() {
                 console.log(`Started ${funcList[currentFunc].name} at ${millis()} ms.`);
             } else {
                 processing = false;
+                console.log(world.waterCells/(512*256))
             }
         }
     }   

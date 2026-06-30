@@ -18,6 +18,11 @@ class WorldGenerator {
 
         this.vis = createGraphics(this.cols, this.rows);
         this.vis.background(0);
+
+        this.maxNoise = 0;
+        this.minNoise = 0;
+        this.avgNoise = 0;
+        this.waterCells = 0;
     }
 
     getCell(x, y) {
@@ -56,34 +61,46 @@ class WorldGenerator {
         const z = rho * Math.cos(phi) + bias;
 
         cell.noise = world.noiseGen.getNoise(x, y, z);
+        if(!world.minNoise || cell.noise < world.minNoise) world.minNoise = cell.noise;
+        if(!world.maxNoise || cell.noise > world.maxNoise) world.maxNoise = cell.noise;
+        world.avgNoise += cell.noise / (world.cols * world.rows);
+    }
+
+    elevationWater(world, cell) {
+        const mid = map(0.15, 0, 1, world.avgNoise, world.maxNoise);
+        if(cell.noise < mid) {
+            cell.sea = true;
+            cell.elev = null;
+            world.waterCells++;
+        } else {
+            cell.sea = false;
+            cell.elev = map(cell.noise, mid, world.maxNoise, 0, 1);
+        }
     }
 
     testDrawCell(world, cell) {
-        if(!cell.noise) return;
-
-        const waterLine = 0.5;
-
-        world.vis.noFill();
-        if(cell.noise > waterLine) {
+        if(cell.elev) {
             const col1 = [50, 200, 50];
             const col2 = [128, 128, 128];
             const col3 = [255, 255, 255];
-            const divider = 0.6;
-            if(cell.noise < divider) {
+            const divider = 0.5;
+            if(cell.elev < divider) {
                 world.vis.stroke(
-                    map(cell.noise, waterLine, divider, col1[0], col2[0]),
-                    map(cell.noise, waterLine, divider, col1[1], col2[1]),
-                    map(cell.noise, waterLine, divider, col1[2], col2[2])
-                );
+                    map(cell.elev, 0, divider, col1[0], col2[0]),
+                    map(cell.elev, 0, divider, col1[1], col2[1]),
+                    map(cell.elev, 0, divider, col1[2], col2[2]),
+                )
             } else {
                 world.vis.stroke(
-                    map(cell.noise, divider, 1, col2[0], col3[0]),
-                    map(cell.noise, divider, 1, col2[1], col3[1]),
-                    map(cell.noise, divider, 1, col2[2], col3[2])
-                );
+                    map(cell.elev, divider, 1, col2[0], col3[0]),
+                    map(cell.elev, divider, 1, col2[1], col3[1]),
+                    map(cell.elev, divider, 1, col2[2], col3[2]),
+                )
             }
-        } else {
+        } else if(cell.sea) {
             world.vis.stroke(0, 0, 180);
+        } else if(cell.noise) {
+            world.vis.stroke(cell.noise * 255);
         }
 
         world.vis.point(cell.x, cell.y);
