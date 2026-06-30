@@ -14,7 +14,7 @@ class WorldGenerator {
             }
         }
 
-        this.noiseGen = new NoiseGenerator(5, 2, 1.5, 1);
+        this.noiseGen = new NoiseGenerator(10, 2, 1.5);
     }
 
     getCell(x, y) {
@@ -41,29 +41,33 @@ class WorldGenerator {
         //arbitrary bias to the location noise is sampled from
         //prevents repeating patturns
         const bias = 10;
+        const scl = 0.5;
 
         //sample noise from a 3D space, on the surface of a sphere
-        let theta = (cell.x / world.cols) * 2*Math.PI;
-        let phi = (cell.y / world.rows) * Math.PI;
-        let rho = 1;
+        const theta = (cell.x / world.cols) * 2*Math.PI;
+        const phi = (cell.y / world.rows) * Math.PI;
+        const rho = scl;
         
-        let x = rho * Math.sin(phi) * Math.cos(theta) + bias;
-        let y = rho * Math.sin(phi) * Math.sin(theta) + bias;
-        let z = rho * Math.cos(phi) + bias;
+        const x = rho * Math.sin(phi) * Math.cos(theta) + bias;
+        const y = rho * Math.sin(phi) * Math.sin(theta) + bias;
+        const z = rho * Math.cos(phi) + bias;
 
-        cell.noise = world.noiseGen.getNoise(x, y, z)*255;
+        cell.noise = world.noiseGen.getNoise(x, y, z);
     }
 
     testDrawCell(world, cell) {
         if(!cell.noise) return;
 
-        fill(cell.noise);
-        noStroke();
-        rect(
+        noFill();
+        if(cell.noise > 0.5) {
+            stroke(0, 180, 0);
+        } else {
+            stroke(0, 0, 180);
+        }
+
+        point(
             map(cell.x, 0, world.cols, 0, width),
             map(cell.y, 0, world.rows, 0, height),
-            width/world.cols,
-            height/world.rows
         )
     }
 }
