@@ -2,7 +2,7 @@ let cnv;
 
 const maxFrame = 1/60*1000;
 
-const world = new WorldGenerator(1024);
+let world;
 
 let processing = true;
 let currentFunc = 0;
@@ -14,7 +14,8 @@ function setup() {
     
     background(0);
 
-    funcList = [world.testNoise];
+    world = new WorldGenerator(1024)
+    funcList = [world.sphereNoise];
     worldIter = world.actOnCell(funcList[currentFunc], world.testDrawCell);
 }
 
