@@ -14,8 +14,7 @@ let sphereMode = false;
 function setup() {
     frameRate(60);
 
-    if(sphereMode) cnv = createCanvas(1024, 512, WEBGL);
-    else cnv = createCanvas(1024, 512);
+    cnv = createCanvas(1024, 512, WEBGL);
     
     background(0);
 
@@ -49,6 +48,13 @@ function draw() {
         sphere(200, 100, 50);
     } else {
         background(0);
+        push();
+        translate(-world.cols/2, -world.rows/2);
         world.draw();
+        pop();
     }
+}
+
+function mousePressed() {
+    sphereMode = !sphereMode
 }
