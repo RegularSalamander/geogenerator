@@ -9,8 +9,11 @@ let currentFunc = 0;
 let funcList;
 let worldIter;
 
+let sphereMode = true;
+
 function setup() {
-    cnv = createCanvas(1024, 512);
+    if(sphereMode) cnv = createCanvas(1024, 512, WEBGL);
+    else cnv = createCanvas(1024, 512);
     
     background(0);
 
@@ -34,5 +37,16 @@ function draw() {
         }
     }
 
-    world.draw();
+    if(sphereMode) {
+        background(10);
+
+        noStroke();
+        rotateX(constrain((height/2 - mouseY)/100, -Math.PI/2, Math.PI/2));
+        rotateY(mouseX/100);
+        texture(world.vis);
+        sphere(200, 100, 50);
+    } else {
+        background(0);
+        world.draw();
+    }
 }
