@@ -1,19 +1,5 @@
 class WorldGenerator {
     constructor(wid, params) {
-        //grid of cells
-        this.cols = Math.floor(wid/2)*2;
-        this.rows = this.cols/2;
-        this.cells = [];
-        for(let i = 0; i < this.cols; i++) {
-            this.cells[i] = [];
-            for (let j = 0; j < this.rows; j++) {
-                this.cells[i][j] = {
-                    x: i,
-                    y: j
-                };
-            }
-        }
-
         //generation parameter defaults
         this.params = {
             noiseOctaves: 8,
@@ -21,7 +7,9 @@ class WorldGenerator {
             noiseFreqInc: 2.5,
             noiseAmpFalloff: 1.5,
             noiseSeed: null,
+
             planetRad: 6.371e6, //Earth radius (m)
+            surfaceArea: 5.100e14, //Earth surface area m^2
             waterCoverage: 0.71, //Earth water coverage (% of surface area)
             maxElevation: 8.848e3 //Height of Mount Everest (m)
         }
@@ -32,10 +20,37 @@ class WorldGenerator {
 
         //values that will be procedurally generated
         this.details = {
-            maxNoise: 0,
-            minNoise: 0,
-            avgNoise: 0,
-            waterCells: 0
+            noiseMax: 0,
+            noiseMin: 0,
+            noiseAvg: 0,
+            noiseVar: 0,
+            waterPercent: 0,
+            surfaceArea: 0
+        }
+
+        //grid of cells
+        this.cols = Math.floor(wid/2)*2;
+        this.rows = this.cols/2;
+        this.cells = [];
+        for(let i = 0; i < this.cols; i++) {
+            this.cells[i] = [];
+            for (let j = 0; j < this.rows; j++) {
+                //properties of each cell
+                let cell = this.cells[i][j] = {};
+                cell.x = i;
+                cell.y = j;
+                cell.longLeft = cell.x / this.cols * 2 * Math.PI;
+                cell.longRight = (cell.x + 1) / this.cols * 2 * Math.PI;
+                cell.colatTop = cell.y / this.rows * Math.PI;
+                cell.colatBottom = (cell.y + 1) / this.rows * Math.PI;
+                cell.width = this.params.planetRad * (cell.longRight - cell.longLeft) * Math.sin((cell.colatTop + cell.colatBottom) / 2);
+                cell.height = this.params.planetRad * (cell.colatBottom - cell.colatTop);
+                cell.area = cell.width * cell.height;
+
+                if(i == 0) {
+                    this.details.surfaceArea += cell.area * this.cols;
+                }
+            }
         }
 
         this.noiseGen = new NoiseGenerator(
@@ -86,20 +101,25 @@ class WorldGenerator {
         const z = rho * Math.cos(phi) + bias;
 
         cell.noise = world.noiseGen.getNoise(x, y, z);
-        if(!world.details.minNoise || cell.noise < world.details.minNoise) world.details.minNoise = cell.noise;
-        if(!world.details.maxNoise || cell.noise > world.details.maxNoise) world.details.maxNoise = cell.noise;
-        world.details.avgNoise += cell.noise / (world.cols * world.rows);
+        if(!world.details.noiseMin || cell.noise < world.details.noiseMin) world.details.noiseMin = cell.noise;
+        if(!world.details.noiseMax || cell.noise > world.details.noiseMax) world.details.noiseMax = cell.noise;
+        world.details.noiseAvg += cell.noise * cell.area / world.details.surfaceArea;
+    }
+
+    calcNoiseVariance(world, cell) {
+        world.details.noiseVar += Math.pow(cell.noise - world.details.noiseAvg, 2) * cell.area / world.details.surfaceArea;
     }
 
     elevationWater(world, cell) {
-        const mid = map(0.15, 0, 1, world.details.avgNoise, world.details.maxNoise);
-        if(cell.noise < mid) {
+        const waterLevel = world.details.noiseAvg + 0.524 * Math.sqrt(world.details.noiseVar);
+        // const mid = map(0.15, 0, 1, world.details.noiseAvg, world.details.noiseMax);
+        if(cell.noise < waterLevel) {
             cell.sea = true;
             cell.elev = null;
-            world.details.waterCells++;
+            world.details.waterPercent += cell.area / world.details.surfaceArea;
         } else {
             cell.sea = false;
-            cell.elev = map(cell.noise, mid, world.details.maxNoise, 0, 1);
+            cell.elev = map(cell.noise, waterLevel, world.details.noiseMax, 0, 1);
         }
     }
 

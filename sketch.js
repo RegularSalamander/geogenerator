@@ -20,11 +20,12 @@ function setup() {
     
     background(0);
 
-    world = new WorldGenerator(512, {noiseSeed: 1});
+    world = new WorldGenerator(1024, {});
 
     funcList = [
         world.actOnCells(world.sphereNoise, world.testDrawCell),
-        world.actOnCells(world.elevationWater, world.testDrawCell)
+        world.actOnCells(world.calcNoiseVariance, world.testDrawCell),
+        world.actOnCells(world.elevationWater, world.testDrawCell),
     ];
 
     console.log(`Started at ${Math.floor(millis())} ms.`);
@@ -37,11 +38,12 @@ function draw() {
             console.log(`Stopped ${world.func.name} at ${Math.floor(millis())} ms.`);
             currentFunc++;
             if(currentFunc < funcList.length) {
-                console.log(`Started ${world.func.name} at ${Math.floor(millis())} ms.`);
+                // console.log(`Started ${world.func.name} at ${Math.floor(millis())} ms.`);
             } else {
                 processing = false;
-                console.log(world.details.waterCells/(world.cols*world.rows));
-                console.log(world.details.avgNoise);
+                console.log(world.details.waterPercent);
+                // console.log(world.details.noiseAvg);
+                // console.log(world.details.noiseVar);
             }
         }
     }   
