@@ -60,7 +60,8 @@ class WorldGenerator {
         return this.cells[x][y];
     }
 
-    *actOnCell(func, drawFunc) {
+    *actOnCells(func, drawFunc) {
+        this.func = func;
         for(let i in this.cells) {
             for(let j in this.cells[i]) {
                 func(this, this.cells[i][j]);

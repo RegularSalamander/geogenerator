@@ -21,21 +21,23 @@ function setup() {
     background(0);
 
     world = new WorldGenerator(512, {noiseSeed: 1});
-    funcList = [world.sphereNoise, world.elevationWater];
-    worldIter = world.actOnCell(funcList[currentFunc], world.testDrawCell);
 
-    console.log(`Started ${funcList[currentFunc].name} at ${Math.floor(millis())} ms.`);
+    funcList = [
+        world.actOnCells(world.sphereNoise, world.testDrawCell),
+        world.actOnCells(world.elevationWater, world.testDrawCell)
+    ];
+
+    console.log(`Started at ${Math.floor(millis())} ms.`);
 }
 
 function draw() {
     let startTime = millis();
     while(processing && millis() - startTime < maxFrame) {
-        if(worldIter.next().done) {
-            console.log(`Stopped ${funcList[currentFunc].name} at ${Math.floor(millis())} ms.`);
+        if(funcList[currentFunc].next().done) {
+            console.log(`Stopped ${world.func.name} at ${Math.floor(millis())} ms.`);
             currentFunc++;
             if(currentFunc < funcList.length) {
-                worldIter = world.actOnCell(funcList[currentFunc], world.testDrawCell);
-                console.log(`Started ${funcList[currentFunc].name} at ${Math.floor(millis())} ms.`);
+                console.log(`Started ${world.func.name} at ${Math.floor(millis())} ms.`);
             } else {
                 processing = false;
                 console.log(world.details.waterCells/(world.cols*world.rows));
