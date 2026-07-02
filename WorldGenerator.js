@@ -14,7 +14,7 @@ class WorldGenerator {
             }
         }
 
-        this.noiseGen = new NoiseGenerator(10, 2, 1.5);
+        this.noiseGen = new NoiseGenerator(10, 2, 1.5, 1);
 
         this.vis = createGraphics(this.cols, this.rows);
         this.vis.background(0);
@@ -85,24 +85,25 @@ class WorldGenerator {
             const col3 = [255, 255, 255];
             const divider = 0.5;
             if(cell.elev < divider) {
-                world.vis.stroke(
+                world.vis.fill(
                     map(cell.elev, 0, divider, col1[0], col2[0]),
                     map(cell.elev, 0, divider, col1[1], col2[1]),
                     map(cell.elev, 0, divider, col1[2], col2[2]),
                 )
             } else {
-                world.vis.stroke(
+                world.vis.fill(
                     map(cell.elev, divider, 1, col2[0], col3[0]),
                     map(cell.elev, divider, 1, col2[1], col3[1]),
                     map(cell.elev, divider, 1, col2[2], col3[2]),
                 )
             }
         } else if(cell.sea) {
-            world.vis.stroke(0, 0, 180);
+            world.vis.fill(0, 0, 180);
         } else if(cell.noise) {
-            world.vis.stroke(cell.noise * 255);
+            world.vis.fill(cell.noise * 255);
         }
 
-        world.vis.point(cell.x, cell.y);
+        world.vis.noStroke();
+        world.vis.rect(cell.x, cell.y, 1, 1);
     }
 }

@@ -20,31 +20,33 @@ function setup() {
     
     background(0);
 
-    world = new WorldGenerator(512);
+    world = new WorldGenerator(1024);
     funcList = [world.sphereNoise, world.elevationWater];
     worldIter = world.actOnCell(funcList[currentFunc], world.testDrawCell);
 
-    console.log(`Started ${funcList[currentFunc].name} at ${millis()} ms.`);
+    console.log(`Started ${funcList[currentFunc].name} at ${Math.floor(millis())} ms.`);
 }
 
 function draw() {
     let startTime = millis();
     while(processing && millis() - startTime < maxFrame) {
         if(worldIter.next().done) {
-            console.log(`Stopped ${funcList[currentFunc].name} at ${millis()} ms.`);
+            console.log(`Stopped ${funcList[currentFunc].name} at ${Math.floor(millis())} ms.`);
             currentFunc++;
             if(currentFunc < funcList.length) {
                 worldIter = world.actOnCell(funcList[currentFunc], world.testDrawCell);
-                console.log(`Started ${funcList[currentFunc].name} at ${millis()} ms.`);
+                console.log(`Started ${funcList[currentFunc].name} at ${Math.floor(millis())} ms.`);
             } else {
                 processing = false;
-                console.log(world.waterCells/(512*256))
+                console.log(world.waterCells/(1024*512))
             }
         }
     }   
 
     if(sphereMode) {
         background(10);
+
+        ortho();
 
         noStroke();
         rotateX(constrain((height/2 - mouseY)/100, -Math.PI/2, Math.PI/2));
