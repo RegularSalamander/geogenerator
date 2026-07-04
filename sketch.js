@@ -24,8 +24,10 @@ function setup() {
 
     funcList = [
         world.actOnCells(world.sphereNoise, world.testDrawCell),
-        world.actOnCells(world.calcNoiseVariance, world.testDrawCell),
+        world.actOnCells(world.sumNoiseVariance, world.testDrawCell),
+        world.actOnce(world.calcWaterLevel),
         world.actOnCells(world.elevationWater, world.testDrawCell),
+        world.actOnCells(world.elevationRidges, world.testDrawCell)
     ];
 
     console.log(`Started at ${Math.floor(millis())} ms.`);
@@ -35,15 +37,10 @@ function draw() {
     let startTime = millis();
     while(processing && millis() - startTime < maxFrame) {
         if(funcList[currentFunc].next().done) {
-            console.log(`Stopped ${world.func.name} at ${Math.floor(millis())} ms.`);
+            console.log(`Finished ${world.func.name} at ${Math.floor(millis())} ms.`);
             currentFunc++;
-            if(currentFunc < funcList.length) {
-                // console.log(`Started ${world.func.name} at ${Math.floor(millis())} ms.`);
-            } else {
+            if(currentFunc >= funcList.length) {
                 processing = false;
-                console.log(world.details.waterPercent);
-                // console.log(world.details.noiseAvg);
-                // console.log(world.details.noiseVar);
             }
         }
     }   

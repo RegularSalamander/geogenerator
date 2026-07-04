@@ -14,14 +14,10 @@ class NoiseGenerator {
 
     getNoise(x, y, z) {
         let total = 0;
-        let amp = 1;
-        let freq = this.freqStart;
 
         for(let i = 0; i < this.octaves; i++) {
-            total += (noise(x * freq, y * freq, z * freq) * 2 - 1) * amp;
-
-            freq *= this.freqInc;
-            amp /= this.ampFalloff;
+            let freq = this.freqStart * Math.pow(this.freqInc, i);
+            total += (noise(x * freq, y * freq, z * freq) * 2 - 1) / Math.pow(this.ampFalloff, i);
         }
 
         return total / this.maxNoise;
