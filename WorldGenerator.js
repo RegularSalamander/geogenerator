@@ -164,7 +164,7 @@ class WorldGenerator {
     }
 
     calcWaterLevel(world) {
-        world.details.waterLevel = world.details.noiseAvg - 0.524 * Math.sqrt(world.details.noiseVar);
+        world.details.waterLevel = world.details.noiseAvg + 0.524 * Math.sqrt(world.details.noiseVar);
     }
 
     elevationWater(world, cell) {
@@ -205,38 +205,31 @@ class WorldGenerator {
         if(Math.abs(cell.gradX) > world.details.gradMax) world.details.gradMax = Math.abs(cell.gradX);
     }
 
-    hydroStep(world, cell) {
-        if(cell.sea) return;
+    traceHydro(world, cell) {
+        let runoff = 1.27 * cell.area;
 
-        cell.nextWater += 1000;
+        for(let step = 0; step < world.cols/10; step++) {
+            if(cell.sea) return;
 
-        let dir = world.d8Dir(world, cell);
-        if(dir[0] == 0 && dir[1] == 0) return;
+            let dir = world.d8Dir(world, cell);
+            if(dir[0] == 0 && dir[1] == 0) {
+                let raise = world.minUphill(world, cell);
+                cell.water += world.minUphill(world, cell) + 1;
+                runoff -= raise * cell.area;
+                if(runoff < 0) return;
+            }
 
-        let other = world.getCell(cell.x + dir[0], cell.y + dir[1]);
-        let target = (cell.elev + cell.water + other.elev + other.water) / 2;
-        let flow = Math.max(cell.water, cell.elev + cell.water - target);
-        
-        cell.nextWater -= flow;
-        other.nextWater += flow;
+            cell.flow += runoff;
 
-        cell.river += flow;
-        cell.flow += flow;
+            cell = world.getCell(cell.x + dir[0], cell.y + dir[1]);
+        }
     }
 
-    hydroFinalize(world, cell) {
-        if(cell.sea) {
-            cell.water = 0;
-            cell.nextWater = 0;
-            cell.flow = 0;
-            cell.flowSmoothed = 0;
-        } else {
-            cell.water = cell.nextWater;
-            const smoothing = 100;
-            cell.flowSmoothed = (cell.flowSmoothed * (smoothing-1) + cell.flow) / smoothing;
-            cell.flow = 0;
+    resetHydro(world, cell) {
+        const smoothing = 10;
+        cell.flowSmoothed = (cell.flowSmoothed * (smoothing-1) + cell.flow) / smoothing;
 
-        }
+        cell.flow = 0;
     }
 
     d8Dir(world, cell) {
@@ -246,7 +239,6 @@ class WorldGenerator {
         for(let x = -1; x <= 1; x++) {
             for(let y = -1; y <= 1; y++) {
                 if(x == 0 && y == 0) continue;
-                // if(x+y > 1 || x+y < -1) continue;
                 let other = world.getCell(cell.x + x, cell.y + y);
                 // if(other.sea) return [x, y];
                 let slope = cell.elev + cell.water - (other.elev + other.water);
@@ -258,6 +250,23 @@ class WorldGenerator {
         }
 
         return dir;
+    }
+
+    minUphill(world, cell) {
+        let min = Infinity;
+
+        for(let x = -1; x <= 1; x++) {
+            for(let y = -1; y <= 1; y++) {
+                if(x == 0 && y == 0) continue;
+                let other = world.getCell(cell.x + x, cell.y + y);
+                let slope = (other.elev + other.water) - (cell.elev + cell.water);
+                if(slope < min) {
+                    min = slope;
+                }
+            }
+        }
+
+        return Math.max(0, min);
     }
 
     drawCellNoise(world, cell) {
@@ -295,14 +304,11 @@ class WorldGenerator {
 
         world.vis.rect(cell.x, cell.y, 1, 1);
 
-        if(cell.flowSmoothed > 100) {
-            world.vis.fill(0, 128, 255, map(cell.flowSmoothed, 500, 10000, 0, 255));
-            world.vis.rect(cell.x, cell.y, 1, 1);
-        }
-        if(cell.water > 1000) {
-            world.vis.fill(0, 128, 255, map(cell.water, 1000, 3000, 0, 255));
-            world.vis.fill(0, 128, 255);
-        }
+        world.vis.fill(0, 128, 255, map(cell.flowSmoothed, 1e11, 5.30e11, 0, 255));
+        world.vis.rect(cell.x, cell.y, 1, 1);
+        
+        world.vis.fill(0, 128, 255, map(cell.water, 10, 50, 0, 255));
+        world.vis.rect(cell.x, cell.y, 1, 1);
     }
 
     drawCellEmboss(world, cell) {
