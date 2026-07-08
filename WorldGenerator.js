@@ -2,8 +2,8 @@ class WorldGenerator {
     constructor(wid, params) {
         //generation parameter defaults
         this.params = {
-            noiseOctaves: 20,
-            noiseFreqStart: 0.3,
+            noiseOctaves: 5,
+            noiseFreqStart: 0.1,
             noiseFreqInc: 4,
             noiseAmpFalloff: 2,
             noiseSeed: null,
@@ -42,7 +42,7 @@ class WorldGenerator {
         for(let i = 0; i < this.cols; i++) {
             this.cells[i] = [];
             for(let j = 0; j < this.rows; j++) {
-                //properties of each cell
+                //immutable properties of each cell
                 let cell = this.cells[i][j] = {};
                 cell.x = i;
                 cell.y = j;
@@ -53,6 +53,15 @@ class WorldGenerator {
                 cell.width = this.params.planetRad * (cell.longRight - cell.longLeft) * Math.sin((cell.colatTop + cell.colatBottom) / 2);
                 cell.height = this.params.planetRad * (cell.colatBottom - cell.colatTop);
                 cell.area = cell.width * cell.height;
+
+                //properties that will be set later
+                cell.sea = false;
+                cell.elev = 0;
+                cell.water = 0;
+                cell.nextWater = 0;
+                cell.flow = 0;
+                cell.flowSmoothed = 0;
+                cell.river = 0;
 
                 if(i == 0) {
                     this.details.surfaceArea += cell.area * this.cols;
@@ -103,14 +112,23 @@ class WorldGenerator {
         }
     }
 
-    *actOnCellsTimes(func, times, drawFunc, drawMod) {
-        this.func = func;
+    *actOnCellsTimes(funclist, times, drawFunc, drawMod) {
         for(let t = 1; t <= times; t++) {
-            for(let i in this.cells) {
-                for(let j in this.cells[i]) {
-                    func(this, this.cells[i][j]);
-                    if(drawFunc && t % drawMod == 0) drawFunc(this, this.cells[i][j]);
-                    yield;
+            for(let func of funclist) {
+                this.func = func;
+                for(let i in this.cells) {
+                    for(let j in this.cells[i]) {
+                        func(this, this.cells[i][j]);
+                        yield;
+                    }
+                }
+            }
+            if(drawFunc && t % drawMod == 0) {
+                for(let i in this.cells) {
+                    for(let j in this.cells[i]) {
+                        drawFunc(this, this.cells[i][j]);
+                        yield;
+                    }
                 }
             }
         }
@@ -134,7 +152,7 @@ class WorldGenerator {
         y += world.params.noise2Amp * noise(world.params.noise2Freq * y, 10, world.params.noise2Freq * x);
         z += world.params.noise2Amp * noise(10, world.params.noise2Freq * x, world.params.noise2Freq * y);
 
-        cell.noise = world.noiseGen.getNoise(x, y, z);
+        cell.noise = world.noiseGen.getNoise(x, y, z)// + Math.sin(cell.longLeft);
 
         if(cell.noise < world.details.noiseMin) world.details.noiseMin = cell.noise;
         if(cell.noise > world.details.noiseMax) world.details.noiseMax = cell.noise;
@@ -146,7 +164,7 @@ class WorldGenerator {
     }
 
     calcWaterLevel(world) {
-        world.details.waterLevel = world.details.noiseAvg + 0.524 * Math.sqrt(world.details.noiseVar);
+        world.details.waterLevel = world.details.noiseAvg - 0.524 * Math.sqrt(world.details.noiseVar);
     }
 
     elevationWater(world, cell) {
@@ -187,6 +205,61 @@ class WorldGenerator {
         if(Math.abs(cell.gradX) > world.details.gradMax) world.details.gradMax = Math.abs(cell.gradX);
     }
 
+    hydroStep(world, cell) {
+        if(cell.sea) return;
+
+        cell.nextWater += 1000;
+
+        let dir = world.d8Dir(world, cell);
+        if(dir[0] == 0 && dir[1] == 0) return;
+
+        let other = world.getCell(cell.x + dir[0], cell.y + dir[1]);
+        let target = (cell.elev + cell.water + other.elev + other.water) / 2;
+        let flow = Math.max(cell.water, cell.elev + cell.water - target);
+        
+        cell.nextWater -= flow;
+        other.nextWater += flow;
+
+        cell.river += flow;
+        cell.flow += flow;
+    }
+
+    hydroFinalize(world, cell) {
+        if(cell.sea) {
+            cell.water = 0;
+            cell.nextWater = 0;
+            cell.flow = 0;
+            cell.flowSmoothed = 0;
+        } else {
+            cell.water = cell.nextWater;
+            const smoothing = 100;
+            cell.flowSmoothed = (cell.flowSmoothed * (smoothing-1) + cell.flow) / smoothing;
+            cell.flow = 0;
+
+        }
+    }
+
+    d8Dir(world, cell) {
+        let steepest = 0;
+        let dir = [0, 0];
+
+        for(let x = -1; x <= 1; x++) {
+            for(let y = -1; y <= 1; y++) {
+                if(x == 0 && y == 0) continue;
+                // if(x+y > 1 || x+y < -1) continue;
+                let other = world.getCell(cell.x + x, cell.y + y);
+                // if(other.sea) return [x, y];
+                let slope = cell.elev + cell.water - (other.elev + other.water);
+                if(slope > steepest) {
+                    steepest = slope;
+                    dir = [x, y];
+                }
+            }
+        }
+
+        return dir;
+    }
+
     drawCellNoise(world, cell) {
         if(world.details.noiseVar > 0) {
             world.vis.fill(((cell.noise - world.details.noiseAvg) / 2 + 0.5) * 255);
@@ -221,14 +294,23 @@ class WorldGenerator {
         }
 
         world.vis.rect(cell.x, cell.y, 1, 1);
+
+        if(cell.flowSmoothed > 100) {
+            world.vis.fill(0, 128, 255, map(cell.flowSmoothed, 500, 10000, 0, 255));
+            world.vis.rect(cell.x, cell.y, 1, 1);
+        }
+        if(cell.water > 1000) {
+            world.vis.fill(0, 128, 255, map(cell.water, 1000, 3000, 0, 255));
+            world.vis.fill(0, 128, 255);
+        }
     }
 
-    drawCellTopo(world, cell) {
+    drawCellEmboss(world, cell) {
+        world.drawCellElev(world, cell);
+
         world.vis.blendMode(MULTIPLY);
 
-        if(cell.sea) {
-            // world.vis.fill(0, 0, 180);
-        } else {
+        if(!cell.sea) {
             world.vis.fill(map(cell.gradY, -0.01, 0.01, 128, 255));
             world.vis.rect(cell.x, cell.y, 1, 1);
         }
