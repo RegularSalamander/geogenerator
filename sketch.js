@@ -23,11 +23,12 @@ function setup() {
     world = new WorldGenerator(1024, {});
 
     funcList = [
-        world.actOnCells(world.sphereNoise, world.testDrawCell),
-        world.actOnCells(world.sumNoiseVariance, world.testDrawCell),
+        world.actOnCells(world.sphereNoise, world.drawCellNoise),
+        world.actOnCells(world.sumNoiseVariance, world.drawCellNoise),
         world.actOnce(world.calcWaterLevel),
-        world.actOnCells(world.elevationWater, world.testDrawCell),
-        world.actOnCells(world.elevationRidges, world.testDrawCell)
+        world.actOnCells(world.elevationWater, world.drawCellElev),
+        world.actOnCells(world.elevationRidges, world.drawCellElev),
+        world.actOnCells(world.calcGradient, world.drawCellTopo)
     ];
 
     console.log(`Started at ${Math.floor(millis())} ms.`);
