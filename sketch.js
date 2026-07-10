@@ -20,7 +20,7 @@ function setup() {
     
     background(0);
 
-    world = new WorldGenerator(1024, {noiseSeed: 3});
+    world = new WorldGenerator(1024, {noiseSeed: 5});
 
     funcList = [
         world.actOnCells(world.sphereNoise, world.drawCellNoise),
@@ -42,6 +42,7 @@ function draw() {
             currentFunc++;
             if(currentFunc >= funcList.length) {
                 processing = false;
+                noLoop();
             }
         }
     }   

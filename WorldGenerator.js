@@ -153,7 +153,7 @@ class WorldGenerator {
         y += world.params.noise2Amp * noise(world.params.noise2Freq * y, 10, world.params.noise2Freq * x);
         z += world.params.noise2Amp * noise(10, world.params.noise2Freq * x, world.params.noise2Freq * y);
 
-        cell.noise = world.noiseGen.getNoise(x, y, z)// + Math.sin(cell.longLeft);
+        cell.noise = world.noiseGen.getNoise(x, y, z);
 
         if(cell.noise < world.details.noiseMin) world.details.noiseMin = cell.noise;
         if(cell.noise > world.details.noiseMax) world.details.noiseMax = cell.noise;
@@ -208,9 +208,23 @@ class WorldGenerator {
 
     traceHydro(world, cell) {
         let runoff = 1 * cell.area * world.params.hydroStep;
+        let sediment = 0;
 
         for(let step = 0; step < world.cols/10; step++) {
             let dir = world.d8Dir(world, cell);
+
+            let sedChange = Math.max(map(dir[2], 0, 10, -1, 1) * cell.area, -sediment);
+            sedChange = constrain(sedChange, -10 * cell.area, 10 * cell.area);
+            if(sedChange < 0 || cell.waterLevel < 10) {
+                sediment += sedChange;
+                cell.elev -= sedChange / cell.area;
+                // if(cell.waterLevel > 50) {
+                //     let waterChange = Math.min(sedChange, cell.waterLevel * cell.area);
+                //     cell.waterLevel -= waterChange / cell.area
+                //     runoff += waterChange
+                // }
+            }
+
             if(dir[0] == 0 && dir[1] == 0) {
                 let raise = Math.min(world.minUphill(world, cell) + 1, runoff / cell.area);
                 cell.waterLevel += raise;
@@ -224,6 +238,7 @@ class WorldGenerator {
         }
 
         cell.waterLevel += runoff / cell.area;
+        cell.elev += sediment / cell.area;
     }
 
     finalizeHydro(world, cell) {
@@ -236,7 +251,7 @@ class WorldGenerator {
 
     d8Dir(world, cell) {
         let steepest = 0;
-        let dir = [0, 0];
+        let dir = [0, 0, 0];
 
         for(let x = -1; x <= 1; x++) {
             for(let y = -1; y <= 1; y++) {
@@ -246,7 +261,7 @@ class WorldGenerator {
                 let slope = cell.elev + cell.waterLevel - (other.elev + other.waterLevel);
                 if(slope > steepest) {
                     steepest = slope;
-                    dir = [x, y];
+                    dir = [x, y, steepest];
                 }
             }
         }
@@ -298,7 +313,7 @@ class WorldGenerator {
             world.vis.rect(cell.x, cell.y, 1, 1);
         } else {
             world.vis.fill(colorRamp(
-                map(cell.elev + cell.waterLevel, -world.params.oceanDepth/8, world.params.maxElevation/8, 0, 1),
+                map(cell.waterLevel, world.params.oceanDepth, 0, 0, 1),
                 [
                     [0, 0, 180],
                     [0, 128, 255]
