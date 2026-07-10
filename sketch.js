@@ -20,7 +20,7 @@ function setup() {
     
     background(0);
 
-    world = new WorldGenerator(1024);
+    world = new WorldGenerator(1024, {noiseSeed: 3});
 
     funcList = [
         world.actOnCells(world.sphereNoise, world.drawCellNoise),
@@ -28,7 +28,7 @@ function setup() {
         world.actOnce(world.calcWaterLevel),
         world.actOnCells(world.elevationWater, world.drawCellElev),
         world.actOnCells(world.elevationRidges, world.drawCellElev),
-        world.actOnCellsTimes([world.traceHydro, world.resetHydro], 100, world.drawCellElev, 10),
+        world.actOnCellsTimes([world.traceHydro, world.finalizeHydro], 10, world.drawCellElev, 1),
     ];
 
     console.log(`Started at ${Math.floor(millis())} ms.`);

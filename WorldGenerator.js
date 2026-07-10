@@ -2,9 +2,9 @@ class WorldGenerator {
     constructor(wid, params) {
         //generation parameter defaults
         this.params = {
-            noiseOctaves: 5,
+            noiseOctaves: 10,
             noiseFreqStart: 0.1,
-            noiseFreqInc: 4,
+            noiseFreqInc: 3,
             noiseAmpFalloff: 2,
             noiseSeed: null,
             noise2Freq: 1.5,
@@ -12,11 +12,14 @@ class WorldGenerator {
             noiseRidgeFreq: 2,
             noiseRidgeStrength: 0.8,
             noiseRidgeExp: 6,
+            
+            hydroStep: 100, //how many years of precipitation/evaporation are simulated in a step
 
-            planetRad: 6.371e6, //Earth radius (m)
-            surfaceArea: 5.100e14, //Earth surface area m^2
+            planetRad: 6.37e6, //Earth radius (m)
+            surfaceArea: 5.10e14, //Earth surface area m^2
             waterCoverage: 0.71, //Earth water coverage (% of surface area)
-            maxElevation: 8.848e3 //Height of Mount Everest (m)
+            maxElevation: 8.85e3, //Height of Mount Everest (m)
+            oceanDepth: 4.00e3,
         }
         //manual parameters
         for(let i in params) {
@@ -57,11 +60,9 @@ class WorldGenerator {
                 //properties that will be set later
                 cell.sea = false;
                 cell.elev = 0;
-                cell.water = 0;
-                cell.nextWater = 0;
+                cell.waterLevel = 0;
                 cell.flow = 0;
                 cell.flowSmoothed = 0;
-                cell.river = 0;
 
                 if(i == 0) {
                     this.details.surfaceArea += cell.area * this.cols;
@@ -169,8 +170,8 @@ class WorldGenerator {
 
     elevationWater(world, cell) {
         if(cell.noise < world.details.waterLevel) {
-            cell.sea = true;
-            cell.elev = 0;
+            cell.elev = map(cell.noise, world.details.waterLevel, world.details.noiseMin, 0, -world.params.oceanDepth);;
+            cell.waterLevel = -cell.elev;
             world.details.waterPercent += cell.area / world.details.surfaceArea;
         } else {
             cell.sea = false;
@@ -179,7 +180,7 @@ class WorldGenerator {
     }
 
     elevationRidges(world, cell) {
-        if(cell.sea) return;
+        if(cell.elev < 0) return;
         const bias = 20;
 
         //sample noise from a 3D space, on the surface of a sphere
@@ -206,30 +207,31 @@ class WorldGenerator {
     }
 
     traceHydro(world, cell) {
-        let runoff = 1.27 * cell.area;
+        let runoff = 1 * cell.area * world.params.hydroStep;
 
         for(let step = 0; step < world.cols/10; step++) {
-            if(cell.sea) return;
-
             let dir = world.d8Dir(world, cell);
             if(dir[0] == 0 && dir[1] == 0) {
-                let raise = world.minUphill(world, cell);
-                cell.water += world.minUphill(world, cell) + 1;
+                let raise = Math.min(world.minUphill(world, cell) + 1, runoff / cell.area);
+                cell.waterLevel += raise;
                 runoff -= raise * cell.area;
-                if(runoff < 0) return;
+                if(runoff <= 0) return;
             }
 
-            cell.flow += runoff;
+            cell.flow += runoff / world.params.hydroStep;
 
             cell = world.getCell(cell.x + dir[0], cell.y + dir[1]);
         }
+
+        cell.waterLevel += runoff / cell.area;
     }
 
-    resetHydro(world, cell) {
+    finalizeHydro(world, cell) {
         const smoothing = 10;
         cell.flowSmoothed = (cell.flowSmoothed * (smoothing-1) + cell.flow) / smoothing;
-
         cell.flow = 0;
+
+        cell.waterLevel = Math.max(cell.waterLevel - 1.42 * world.params.hydroStep, 0);
     }
 
     d8Dir(world, cell) {
@@ -241,7 +243,7 @@ class WorldGenerator {
                 if(x == 0 && y == 0) continue;
                 let other = world.getCell(cell.x + x, cell.y + y);
                 // if(other.sea) return [x, y];
-                let slope = cell.elev + cell.water - (other.elev + other.water);
+                let slope = cell.elev + cell.waterLevel - (other.elev + other.waterLevel);
                 if(slope > steepest) {
                     steepest = slope;
                     dir = [x, y];
@@ -259,7 +261,7 @@ class WorldGenerator {
             for(let y = -1; y <= 1; y++) {
                 if(x == 0 && y == 0) continue;
                 let other = world.getCell(cell.x + x, cell.y + y);
-                let slope = (other.elev + other.water) - (cell.elev + cell.water);
+                let slope = (other.elev + other.waterLevel) - (cell.elev + cell.waterLevel);
                 if(slope < min) {
                     min = slope;
                 }
@@ -280,35 +282,30 @@ class WorldGenerator {
     }
 
     drawCellElev(world, cell) {
-        if(cell.sea) {
-            world.vis.fill(0, 0, 180);
+        if(cell.waterLevel < 50) {
+            world.vis.fill(colorRamp(
+                cell.elev / world.params.maxElevation,
+                [
+                    [50, 200, 50],
+                    [128, 128, 128],
+                    [255, 255, 255]
+                ]
+            ));
+
+            world.vis.rect(cell.x, cell.y, 1, 1);
+
+            world.vis.fill(0, 128, 255, map(cell.flowSmoothed, 1e11, 5.30e11, 0, 255));
+            world.vis.rect(cell.x, cell.y, 1, 1);
         } else {
-            const col1 = [50, 200, 50];
-            const col2 = [128, 128, 128];
-            const col3 = [255, 255, 255];
-            const divider = world.params.maxElevation * 0.5;
-            if(cell.elev < divider) {
-                world.vis.fill(
-                    map(cell.elev, 0, divider, col1[0], col2[0]),
-                    map(cell.elev, 0, divider, col1[1], col2[1]),
-                    map(cell.elev, 0, divider, col1[2], col2[2]),
-                )
-            } else {
-                world.vis.fill(
-                    map(cell.elev, divider, world.params.maxElevation, col2[0], col3[0]),
-                    map(cell.elev, divider, world.params.maxElevation, col2[1], col3[1]),
-                    map(cell.elev, divider, world.params.maxElevation, col2[2], col3[2]),
-                )
-            }
+            world.vis.fill(colorRamp(
+                map(cell.elev + cell.waterLevel, -world.params.oceanDepth/8, world.params.maxElevation/8, 0, 1),
+                [
+                    [0, 0, 180],
+                    [0, 128, 255]
+                ]
+            ));
+            world.vis.rect(cell.x, cell.y, 1, 1);
         }
-
-        world.vis.rect(cell.x, cell.y, 1, 1);
-
-        world.vis.fill(0, 128, 255, map(cell.flowSmoothed, 1e11, 5.30e11, 0, 255));
-        world.vis.rect(cell.x, cell.y, 1, 1);
-        
-        world.vis.fill(0, 128, 255, map(cell.water, 10, 50, 0, 255));
-        world.vis.rect(cell.x, cell.y, 1, 1);
     }
 
     drawCellEmboss(world, cell) {
@@ -323,4 +320,17 @@ class WorldGenerator {
 
         world.vis.blendMode(BLEND);
     }
+}
+
+function colorRamp(t, colList) {
+    t = constrain(t, 0, 0.999);
+    let col1 = colList[Math.floor(t * (colList.length - 1))];
+    let col2 = colList[Math.floor(t * (colList.length - 1)) + 1];
+    let tween = (t * (colList.length - 1)) % 1;
+    // console.log(t);
+    return [
+        map(tween, 0, 1, col1[0], col2[0]),
+        map(tween, 0, 1, col1[1], col2[1]),
+        map(tween, 0, 1, col1[2], col2[2]),
+    ]
 }
