@@ -104,23 +104,27 @@ class WorldGenerator {
 
     *actOnCells(func, drawFunc) {
         this.func = func;
+        let progress = 0;
         for(let i in this.cells) {
             for(let j in this.cells[i]) {
                 func(this, this.cells[i][j]);
                 if(drawFunc) drawFunc(this, this.cells[i][j]);
-                yield;
+                progress += 1 / (this.rows * this.cols);
+                yield progress;
             }
         }
     }
 
     *actOnCellsTimes(funclist, times, drawFunc, drawMod) {
+        let progress = 0;
         for(let t = 1; t <= times; t++) {
             for(let func of funclist) {
                 this.func = func;
                 for(let i in this.cells) {
                     for(let j in this.cells[i]) {
                         func(this, this.cells[i][j]);
-                        yield;
+                        progress += 1 / (this.rows * this.cols * (funclist.length * times + Math.floor(times / drawMod)));
+                        yield progress;
                     }
                 }
             }
@@ -128,7 +132,8 @@ class WorldGenerator {
                 for(let i in this.cells) {
                     for(let j in this.cells[i]) {
                         drawFunc(this, this.cells[i][j]);
-                        yield;
+                        progress += 1 / (this.rows * this.cols * (funclist.length * times + Math.floor(times / drawMod)));
+                        yield progress;
                     }
                 }
             }
@@ -218,11 +223,6 @@ class WorldGenerator {
             if(sedChange < 0 || cell.waterLevel < 10) {
                 sediment += sedChange;
                 cell.elev -= sedChange / cell.area;
-                // if(cell.waterLevel > 50) {
-                //     let waterChange = Math.min(sedChange, cell.waterLevel * cell.area);
-                //     cell.waterLevel -= waterChange / cell.area
-                //     runoff += waterChange
-                // }
             }
 
             if(dir[0] == 0 && dir[1] == 0) {
