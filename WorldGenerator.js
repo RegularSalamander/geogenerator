@@ -213,8 +213,8 @@ class WorldGenerator {
         for(let step = 0; step < world.cols/10; step++) {
             let dir = world.d8Dir(world, cell);
 
-            let sedChange = Math.max(map(dir[2], 0, 10, -1, 1) * cell.area, -sediment);
-            sedChange = constrain(sedChange, -10 * cell.area, 10 * cell.area);
+            let sedChange = map(dir[2], 0, 51200 / world.cols, -1, 1) * cell.area;
+            sedChange = Math.max(sedChange, -sediment);
             if(sedChange < 0 || cell.waterLevel < 10) {
                 sediment += sedChange;
                 cell.elev -= sedChange / cell.area;
