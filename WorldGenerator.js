@@ -212,17 +212,9 @@ class WorldGenerator {
 
     traceHydro(world, cell) {
         let runoff = 1 * cell.area * world.params.hydroStep;
-        let sediment = 0;
 
         for(let step = 0; step < world.cols/10; step++) {
             let dir = world.d8Dir(world, cell);
-
-            let sedChange = constrain(map(dir[2], 0, 0.002, -1, 1), -1, 1) * 20 * cell.area;
-            sedChange = Math.max(sedChange, -sediment/2);
-            if(sedChange < 0 || cell.waterLevel < 10) {
-                sediment += sedChange;
-                cell.elev -= sedChange / cell.area;
-            }
 
             if(dir[0] == 0 && dir[1] == 0) {
                 let raise = Math.min(world.minUphill(world, cell) + 1, runoff / cell.area);
@@ -237,6 +229,29 @@ class WorldGenerator {
         }
 
         cell.waterLevel += runoff / cell.area;
+    }
+
+    traceSediment(world, cell) {
+        let sediment = 0;
+
+        for(let step = 0; step < world.cols/100; step++) {
+            let dir = world.d8Dir(world, cell);
+            let maxFill = 20//Math.max(world.minUphill(world, cell), 0) + 1;
+
+            let elevChange = constrain(map(dir[2], 0, 0.002, 1, -1) * 20, -20, maxFill);
+            elevChange = Math.min(elevChange, sediment/2 / cell.area);
+            if(elevChange > 0 || cell.waterLevel < 10) {
+                sediment -= elevChange * cell.area;
+                cell.elev += elevChange;
+                if(sediment < 1) {
+                    cell.elev += sediment / cell.area;
+                    return;
+                }
+            }
+
+            cell = world.getCell(cell.x + dir[0], cell.y + dir[1]);
+        }
+
         cell.elev += sediment / cell.area;
     }
 

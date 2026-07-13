@@ -28,7 +28,7 @@ function setup() {
         world.actOnce(world.calcWaterLevel),
         world.actOnCells(world.elevationWater, world.drawCellElev),
         world.actOnCells(world.elevationRidges, world.drawCellElev),
-        world.actOnCellsTimes([world.traceHydro, world.finalizeHydro], 10, world.drawCellElev, 1),
+        world.actOnCellsTimes([world.traceSediment, world.traceHydro, world.finalizeHydro], 10, world.drawCellElev, 1),
     ];
 
     console.log(`Started at ${Math.floor(millis())} ms.`);
