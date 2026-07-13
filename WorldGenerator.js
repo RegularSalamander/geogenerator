@@ -2,6 +2,8 @@ class WorldGenerator {
     constructor(wid, params) {
         //generation parameter defaults
         this.params = {
+            planetRad: 6.37e6, //Earth radius (m)
+
             noiseOctaves: 10,
             noiseFreqStart: 0.1,
             noiseFreqInc: 3,
@@ -9,17 +11,16 @@ class WorldGenerator {
             noiseSeed: null,
             noise2Freq: 1.5,
             noise2Amp: 0.5,
-            noiseRidgeFreq: 2,
-            noiseRidgeStrength: 0.8,
-            noiseRidgeExp: 6,
             
-            hydroStep: 100, //how many years of precipitation/evaporation are simulated in a step
-
-            planetRad: 6.37e6, //Earth radius (m)
-            surfaceArea: 5.10e14, //Earth surface area m^2
             waterCoverage: 0.71, //Earth water coverage (% of surface area)
             maxElevation: 8.85e3, //Height of Mount Everest (m)
             oceanDepth: 4.00e3,
+            noiseRidgeFreq: 2,
+            noiseRidgeStrength: 0.8,
+            noiseRidgeExp: 6,
+
+            hydroStep: 100, //how many years of precipitation/evaporation are simulated in a step
+            
         }
         //manual parameters
         for(let i in params) {
@@ -51,13 +52,19 @@ class WorldGenerator {
                 cell.y = j;
                 cell.longLeft = cell.x / this.cols * 2 * Math.PI;
                 cell.longRight = (cell.x + 1) / this.cols * 2 * Math.PI;
+                cell.long = (cell.longLeft + cell.longRight) / 2;
                 cell.colatTop = cell.y / this.rows * Math.PI;
                 cell.colatBottom = (cell.y + 1) / this.rows * Math.PI;
+                cell.colat = (cell.colatTop + cell.colatBottom) / 2;
                 cell.width = this.params.planetRad * (cell.longRight - cell.longLeft) * Math.sin((cell.colatTop + cell.colatBottom) / 2);
                 cell.height = this.params.planetRad * (cell.colatBottom - cell.colatTop);
                 cell.area = cell.width * cell.height;
+                cell.cartX = Math.sin(cell.colat) * Math.cos(cell.long);
+                cell.cartY = Math.sin(cell.colat) * Math.sin(cell.long);
+                cell.cartZ = Math.cos(cell.colat);
 
                 //properties that will be set later
+                cell.noise = 0;
                 cell.sea = false;
                 cell.elev = 0;
                 cell.waterLevel = 0;
@@ -147,14 +154,9 @@ class WorldGenerator {
         //prevents repeating patturns
         const bias = 10;
 
-        //sample noise from a 3D space, on the surface of a sphere
-        let theta = (cell.x / world.cols) * 2 * Math.PI;
-        let phi = (cell.y / world.rows) * Math.PI;
-        let rho = 1;
-
-        let x = rho * Math.sin(phi) * Math.cos(theta) + bias;
-        let y = rho * Math.sin(phi) * Math.sin(theta) + bias;
-        let z = rho * Math.cos(phi) + bias;
+        let x = cell.cartX + bias;
+        let y = cell.cartY + bias;
+        let z = cell.cartZ + bias;
 
         x += world.params.noise2Amp * noise(world.params.noise2Freq * x, world.params.noise2Freq * y, 10);
         y += world.params.noise2Amp * noise(world.params.noise2Freq * y, 10, world.params.noise2Freq * x);
@@ -190,14 +192,9 @@ class WorldGenerator {
         if(cell.elev < 0) return;
         const bias = 20;
 
-        //sample noise from a 3D space, on the surface of a sphere
-        let theta = (cell.x / world.cols) * 2 * Math.PI;
-        let phi = (cell.y / world.rows) * Math.PI;
-        let rho = world.params.noiseRidgeFreq;
-
-        let x = rho * Math.sin(phi) * Math.cos(theta) + bias;
-        let y = rho * Math.sin(phi) * Math.sin(theta) + bias;
-        let z = rho * Math.cos(phi) + bias;
+        let x = cell.cartX * world.params.noiseRidgeFreq + bias;
+        let y = cell.cartY * world.params.noiseRidgeFreq + bias;
+        let z = cell.cartZ * world.params.noiseRidgeFreq + bias;
 
         cell.elev *= map(world.params.noiseRidgeStrength, 0, 1, 1, Math.pow(1 - Math.abs(noise(x, y, z)*2-1), world.params.noiseRidgeExp));
     }

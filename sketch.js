@@ -62,7 +62,7 @@ function draw() {
         texture(world.vis);
         sphere(200, 100, 50);
         pop();
-    } else {
+    } else if(frameCount % 60 == 0) {
         background(0);
         push();
         translate(-width/2, -height/2);
