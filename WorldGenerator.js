@@ -189,7 +189,7 @@ class WorldGenerator {
     }
 
     elevationRidges(world, cell) {
-        if(cell.elev < 0) return;
+        if(cell.elev > 0) {
         const bias = 20;
 
         let x = cell.cartX * world.params.noiseRidgeFreq + bias;
@@ -197,6 +197,11 @@ class WorldGenerator {
         let z = cell.cartZ * world.params.noiseRidgeFreq + bias;
 
         cell.elev *= map(world.params.noiseRidgeStrength, 0, 1, 1, Math.pow(1 - Math.abs(noise(x, y, z)*2-1), world.params.noiseRidgeExp));
+        } else {
+            const curve = (t, a, b) => (Math.pow(t + a, b) - Math.pow(a, b)) / (Math.pow(1 + a, b) - Math.pow(a, b))
+            cell.elev = curve(map(cell.elev, 0, -world.params.oceanDepth, 0, 1), 1, -6) * -world.params.oceanDepth
+            cell.waterLevel = -cell.elev;
+        }
     }
 
     calcGradient(world, cell) {
