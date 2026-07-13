@@ -316,22 +316,46 @@ class WorldGenerator {
             world.vis.fill(colorRamp(
                 cell.elev / world.params.maxElevation,
                 [
-                    [50, 200, 50],
-                    [128, 128, 128],
-                    [255, 255, 255]
+                    [172,208,165],
+                    [148,191,139],
+                    [168,198,143],
+                    [189,204,150],
+                    [209,215,171],
+                    [225,228,181],
+                    [239,235,192],
+                    [232,225,182],
+                    [222,214,163],
+                    [211,202,157],
+                    [202,185,130],
+                    [195,167,107],
+                    [185,152,90],
+                    [170,135,83],
+                    [172,154,124],
+                    [186,174,154],
+                    [202,195,184],
+                    [224,222,216],
+                    [245,244,242]
                 ]
             ));
 
             world.vis.rect(cell.x, cell.y, 1, 1);
 
-            world.vis.fill(0, 128, 255, Math.pow(map(cell.flowDisp, 8.93e9, 8.93e9 * 100, 0, 1), 1) * 255);
+            world.vis.fill(216, 242, 254, Math.pow(map(cell.flowDisp, 8.93e9, 8.93e9 * 100, 0, 1), 1) * 255);
             world.vis.rect(cell.x, cell.y, 1, 1);
         } else {
             world.vis.fill(colorRamp(
-                map(cell.waterLevel, world.params.oceanDepth, 0, 0, 1),
+                map(cell.waterLevel, 0, world.params.oceanDepth, 0, 1),
                 [
-                    [0, 0, 180],
-                    [0, 128, 255]
+                    [216,242,254],
+                    [198,236,255],
+                    [185,227,255],
+                    [172,219,251],
+                    [161,210,247],
+                    [150,201,240],
+                    [141,193,234],
+                    [132,185,227],
+                    [121,178,222],
+                    [113,171,216]
                 ]
             ));
             world.vis.rect(cell.x, cell.y, 1, 1);
