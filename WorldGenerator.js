@@ -62,7 +62,7 @@ class WorldGenerator {
                 cell.elev = 0;
                 cell.waterLevel = 0;
                 cell.flow = 0;
-                cell.flowSmoothed = 0;
+                cell.flowDisp = 0;
 
                 if(i == 0) {
                     this.details.surfaceArea += cell.area * this.cols;
@@ -120,19 +120,21 @@ class WorldGenerator {
         for(let t = 1; t <= times; t++) {
             for(let func of funclist) {
                 this.func = func;
+                progress = 0;
                 for(let i in this.cells) {
                     for(let j in this.cells[i]) {
                         func(this, this.cells[i][j]);
-                        progress += 1 / (this.rows * this.cols * (funclist.length * times + Math.floor(times / drawMod)));
+                        progress += 1 / (this.rows * this.cols);
                         yield progress;
                     }
                 }
             }
             if(drawFunc && t % drawMod == 0) {
+                progress = 0;
                 for(let i in this.cells) {
                     for(let j in this.cells[i]) {
                         drawFunc(this, this.cells[i][j]);
-                        progress += 1 / (this.rows * this.cols * (funclist.length * times + Math.floor(times / drawMod)));
+                        progress += 1 / (this.rows * this.cols);
                         yield progress;
                     }
                 }
@@ -218,7 +220,7 @@ class WorldGenerator {
         for(let step = 0; step < world.cols/10; step++) {
             let dir = world.d8Dir(world, cell);
 
-            let sedChange = map(dir[2], 0, 51200 / world.cols, -1, 1) * cell.area;
+            let sedChange = map(dir[2], 0, 51200 / world.cols * 4, -1, 1) * 10 * cell.area;
             sedChange = Math.max(sedChange, -sediment);
             if(sedChange < 0 || cell.waterLevel < 10) {
                 sediment += sedChange;
@@ -232,9 +234,9 @@ class WorldGenerator {
                 if(runoff <= 0) return;
             }
 
-            cell.flow += runoff / world.params.hydroStep;
-
             cell = world.getCell(cell.x + dir[0], cell.y + dir[1]);
+
+            cell.flow += runoff / world.params.hydroStep;
         }
 
         cell.waterLevel += runoff / cell.area;
@@ -242,8 +244,7 @@ class WorldGenerator {
     }
 
     finalizeHydro(world, cell) {
-        const smoothing = 10;
-        cell.flowSmoothed = (cell.flowSmoothed * (smoothing-1) + cell.flow) / smoothing;
+        cell.flowDisp = cell.flow;
         cell.flow = 0;
 
         cell.waterLevel = Math.max(cell.waterLevel - 1.42 * world.params.hydroStep, 0);
@@ -309,7 +310,7 @@ class WorldGenerator {
 
             world.vis.rect(cell.x, cell.y, 1, 1);
 
-            world.vis.fill(0, 128, 255, map(cell.flowSmoothed, 1e11, 5.30e11, 0, 255));
+            world.vis.fill(0, 128, 255, Math.pow(map(cell.flowDisp, 8.93e9, 8.93e9 * 100, 0, 1), 1) * 255);
             world.vis.rect(cell.x, cell.y, 1, 1);
         } else {
             world.vis.fill(colorRamp(
